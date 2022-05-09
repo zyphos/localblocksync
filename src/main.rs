@@ -41,13 +41,16 @@ struct Args {
     #[clap(short, long, default_value_t = 1024)]
     chunck: usize,
 
+    /// Quiet mode, do not print interactive user detail like: show progress, Threaded mode active, Buffer Size, Block size, filesize
+    #[clap(short, long)]
+    quiet: bool,
+
     /// Path of data source, a file or a block device
     src_path: String,
 
     /// Path of data destination, a file or a block device
     dst_path: String,
 }
-
 
 // Generate ioctl function
 const BLKGETSIZE64_CODE: u8 = 0x12; // Defined in linux/fs.h
@@ -58,7 +61,7 @@ fn main(){
     let arg = Args::parse();
     let src_path = Path::new(&arg.src_path);
     let dst_path = Path::new(&arg.dst_path);
-    copy(src_path, dst_path, arg.thread, arg.buffer, arg.chunck);
+    copy(src_path, dst_path, arg.thread, arg.buffer, arg.chunck, arg.quiet);
 }
 
 /// Determine block device size
@@ -115,13 +118,15 @@ fn display_progress(file_cursor_pos: f64, src_size: f64, start_time: Instant){
     stdout.flush().unwrap();
 }
 
-fn copy(src_path: &Path, dst_path: &Path, threaded: bool, buffer_size: usize, chunck_size: usize){
+fn copy(src_path: &Path, dst_path: &Path, threaded: bool, buffer_size: usize, chunck_size: usize, quiet: bool){
     println!("Synching {:?} to {:?}", src_path, dst_path);
     let src_size = filesize(src_path).unwrap();
     let dst_size = filesize(dst_path).unwrap();
-    println!("Sizes:");
-    println!("{}: {} [{:.1} MB]", src_path.to_str().unwrap(), src_size, src_size as f64 / 1024. / 1024.);
-    println!("{}: {} [{:.1} MB]", dst_path.to_str().unwrap(), dst_size, dst_size as f64 / 1024. / 1024.);
+    if !quiet{
+        println!("Sizes:");
+        println!("{}: {} [{:.1} MB]", src_path.to_str().unwrap(), src_size, src_size as f64 / 1024. / 1024.);
+        println!("{}: {} [{:.1} MB]", dst_path.to_str().unwrap(), dst_size, dst_size as f64 / 1024. / 1024.);
+    }
 
     if src_size == 0{
         println!("Source file is empty ! Nothing to do !");
@@ -155,8 +160,11 @@ fn copy(src_path: &Path, dst_path: &Path, threaded: bool, buffer_size: usize, ch
 
     let buffer_size: usize = 1024*1024*buffer_size;
     let block_size: usize = 1024*chunck_size; // Window for writing
-    println!("Buffer size: 2x {} [{:.1} MB]", buffer_size, buffer_size as f64 / 1024. / 1024.);
-    println!("Block size (chunk): 2x {} [{:.1} MB]", block_size, block_size as f64 / 1024. / 1024.);
+    if !quiet{
+        println!("Buffer size: 2x {} [{:.1} MB]", buffer_size, buffer_size as f64 / 1024. / 1024.);
+        println!("Block size (chunk): 2x {} [{:.1} MB]", block_size, block_size as f64 / 1024. / 1024.);
+    }
+
     let mut buffer_src = vec![0u8; buffer_size];
     let mut buffer_dst = vec![0u8; buffer_size];
     let mut fp: usize = 0;
@@ -165,7 +173,9 @@ fn copy(src_path: &Path, dst_path: &Path, threaded: bool, buffer_size: usize, ch
     let start_time = Instant::now();
 
     if threaded{
-        println!("Threaded - Reading source and destination at the same time.");
+        if !quiet {
+            println!("Threaded - Reading source and destination at the same time.");
+        }
         let src_file = Arc::new(Mutex::new(src_file));
         let buffer_src = Arc::new(Mutex::new(buffer_src));
         let src_len = Arc::new(Mutex::new(0));
@@ -230,7 +240,7 @@ fn copy(src_path: &Path, dst_path: &Path, threaded: bool, buffer_size: usize, ch
                 }
             }
             fp += *src_len;
-            if time2display.elapsed().as_secs() > 2{
+            if !quiet && time2display.elapsed().as_secs() > 2{
                 display_progress(fp as f64, src_size as f64, start_time);
                 time2display = Instant::now();
             }
@@ -251,13 +261,15 @@ fn copy(src_path: &Path, dst_path: &Path, threaded: bool, buffer_size: usize, ch
                 bytes_written += src_len;
             }
             fp += src_len;
-            if time2display.elapsed().as_secs() > 2{
-                display_progress(fp as f64, src_size as f64, start_time);
+            if !quiet && time2display.elapsed().as_secs() > 2{
+                    display_progress(fp as f64, src_size as f64, start_time);
                 time2display = Instant::now();
             }
         }
     }
-    println!("");
+    if !quiet{
+        println!(""); // To skip line after display_progress
+    }
     println!("Elapsed time: {:.2}s", start_time.elapsed().as_secs());
     println!("Total bytes written: {} [{:.1} MB]", bytes_written, bytes_written as f64 / 1024. / 1024.);
 }

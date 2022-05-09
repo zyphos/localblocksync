@@ -195,7 +195,7 @@ dependencies = [
 
 [[package]]
 name = "localblocksync"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "block-utils",
  "clap",
