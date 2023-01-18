@@ -35,11 +35,11 @@ struct Args {
 
     /// Read buffer size in MB, default 100MB (Need 2x this in RAM)
     #[clap(short, long, default_value_t = 100)]
-    buffer: usize,
+    buffer_size: usize,
 
-    /// Chunck size in KB, default 1024KB (Need 1x this in RAM)
+    /// Chunk size in KB, default 1024KB (Need 1x this in RAM)
     #[clap(short, long, default_value_t = 1024)]
-    chunck: usize,
+    chunk_size: usize,
 
     /// Quiet mode, do not print interactive user detail like: show progress, Threaded mode active, Buffer Size, Block size, filesize
     #[clap(short, long)]
@@ -61,7 +61,7 @@ fn main(){
     let arg = Args::parse();
     let src_path = Path::new(&arg.src_path);
     let dst_path = Path::new(&arg.dst_path);
-    copy(src_path, dst_path, arg.thread, arg.buffer, arg.chunck, arg.quiet);
+    copy(src_path, dst_path, arg.thread, arg.buffer_size, arg.chunk_size, arg.quiet);
 }
 
 /// Determine block device size
@@ -118,7 +118,7 @@ fn display_progress(file_cursor_pos: f64, src_size: f64, start_time: Instant){
     stdout.flush().unwrap();
 }
 
-fn copy(src_path: &Path, dst_path: &Path, threaded: bool, buffer_size: usize, chunck_size: usize, quiet: bool){
+fn copy(src_path: &Path, dst_path: &Path, threaded: bool, buffer_size: usize, chunk_size: usize, quiet: bool){
     println!("Synching {:?} to {:?}", src_path, dst_path);
     let src_size = filesize(src_path).unwrap();
     let dst_size = filesize(dst_path).unwrap();
@@ -159,7 +159,7 @@ fn copy(src_path: &Path, dst_path: &Path, threaded: bool, buffer_size: usize, ch
     }
 
     let buffer_size: usize = 1024*1024*buffer_size;
-    let block_size: usize = 1024*chunck_size; // Window for writing
+    let block_size: usize = 1024*chunk_size; // Window for writing
     if !quiet{
         println!("Buffer size: 2x {} [{:.1} MB]", buffer_size, buffer_size as f64 / 1024. / 1024.);
         println!("Block size (chunk): 2x {} [{:.1} MB]", block_size, block_size as f64 / 1024. / 1024.);
