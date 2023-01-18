@@ -37,7 +37,7 @@ struct Args {
     #[clap(short, long, default_value_t = 100)]
     buffer: usize,
 
-    /// Read buffer size in KB, default 1MB (Need 1x this in RAM)
+    /// Chunck size in KB, default 1024KB (Need 1x this in RAM)
     #[clap(short, long, default_value_t = 1024)]
     chunck: usize,
 
