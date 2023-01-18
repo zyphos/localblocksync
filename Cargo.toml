@@ -6,6 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-block-utils = "0.10.6"
-nix = "0.24.0"
-clap = { version = "3.1.16", features = ["derive"] }
+block-utils = "0.10.8"
+nix = "0.26.2"
+clap = { version = "4.1.1", features = ["derive"] }
